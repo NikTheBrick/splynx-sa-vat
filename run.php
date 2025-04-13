@@ -17,8 +17,84 @@ $api->login([
 // TAX ID with 15.5 we have to skip it
 $tax_id = 15;
 
+//*********************************************
+// Change Services - The main function !!!
+//*********************************************
+function change_services($all_tariffs, $type) {
+    foreach ($all_tariffs as &$tar) {
+        $tar['tax_id'] = $tax_id;
+        $old_tariff = $tar['id'];
+        unset($tar['id']);
+        $tar['title'] = $tar['title'].' new 15.5%';
+        $result=$api->api_call_post('admin/tariffs/'.$type, $tar);
+        if ($result) {
+            $new_tariff = $api->response;
+            file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New {$type} tariff created: {$new_tariff['id']} \n", FILE_APPEND);
+        } else {
+            file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New {$type} tariff creating ERROR: ". print_r($api->response, true) ."\n", FILE_APPEND);
+        }
+        file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 
-// get all InetTariffs by API
+        //working with services
+        $batch_size = 100; // You can adjust this value
+        $offset = 0;
+
+        while (true) {
+            // get all InetServices by API
+            $url_ser = 'admin/customers/customer/0/'.$type.'-services';
+
+            $search_arr = [
+                'main_attributes' => [
+                    'tariff_id' => $old_tariff,
+                    'bundle_service_id' => 0,
+                    'status' => 'active',
+                ],
+                'limit' => $batch_size,
+                'offset' => $offset,
+            ];
+
+            $api->api_call_get($url_ser . '?' . http_build_query($search_arr));
+            $current_batch = $api->response;
+
+            if (empty($current_batch)) {
+                break; // Exit the loop if no more tariffs are found
+            }
+
+            foreach ($current_batch as &$serv) {
+                // get all InetServices by API
+                $url_change_tarr = "admin/tariffs/change-tariff/";
+                $data_change = [
+                    'newTariffId' => $new_tariff['id'],
+                    'targetDate' => "2025-05-01",
+                    'description' => $serv['description'],
+                    'newServicePrice' => $serv['unit_price'],
+                ];
+
+                $result = $api->api_call_put($url_change_tarr.$serv['id'].'?type=internet', '',$data_change);
+                if ($result) {
+                    file_put_contents($log_file,  "Old servise ID: {$serv['id']} -> New internet service created: ID {$api->response} \n", FILE_APPEND);
+                } else {
+                    file_put_contents($log_file,  "Old servise ID: {$serv['id']} -> New Internet service creating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                }
+            }
+
+            $offset += $batch_size;
+
+            // Optional: Add a delay to avoid overwhelming the API
+            // sleep(1);
+        }
+
+        file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+        file_put_contents($log_file,  "\n\n", FILE_APPEND);
+        //break;
+    };
+};
+
+//***************
+// Update Tariffs
+//***************
+
+// InetTariffs 
 $url_inet_tar = "admin/tariffs/internet";
 $search_arr = [
     'main_attributes' => [
@@ -29,73 +105,45 @@ $search_arr = [
 
 $api->api_call_get($url_inet_tar.'?'.http_build_query($search_arr));
 $all_inet_tar = $api->response;
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+file_put_contents($log_file,  "                                        Internet Tariffs                                               \n", FILE_APPEND);
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+change_services($all_inet_tar, "internet");
 
-foreach ($all_inet_tar as &$inet_tar) {
-    $inet_tar['tax_id'] = $tax_id;
-    $old_tariff = $inet_tar['id'];
-    unset($inet_tar['id']);
-    $inet_tar['title'] = $inet_tar['title'].' new 15.5%';
-    $result=$api->api_call_post($url_inet_tar, $inet_tar);
-    if ($result) {
-        $new_tariff = $api->response;
-        file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New Internet tariff created: {$new_tariff['id']} \n", FILE_APPEND);
-    } else {
-        file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New Internet tariff creating ERROR: ". print_r($api->response, true) ."\n", FILE_APPEND);
-    }
-    file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 
-    //working with services
-    $batch_size = 100; // You can adjust this value
-    $offset = 0;
+// VoiceTariffs 
+$url_voice_tar = "admin/tariffs/voice";
+$search_arr = [
+    'main_attributes' => [
+        'available_for_services' => '1',
+        'tax_id' => ['!=', $tax_id],                 
+    ],
+];
 
-    while (true) {
-        // get all InetServices by API
-        $url_inet_ser = "admin/customers/customer/0/internet-services";
+$api->api_call_get($url_voice_tar.'?'.http_build_query($search_arr));
+$all_voice_tar = $api->response;
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+file_put_contents($log_file,  "                                           Voice Tariffs                                               \n", FILE_APPEND);
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+change_services($all_voice_tar, "voice");
 
-        $search_arr = [
-            'main_attributes' => [
-                'tariff_id' => $old_tariff,
-                'bundle_service_id' => 0,
-                'status' => 'active',
-            ],
-            'limit' => $batch_size,
-            'offset' => $offset,
-        ];
 
-        $api->api_call_get($url_inet_ser . '?' . http_build_query($search_arr));
-        $current_batch = $api->response;
+// RecurringTariffs 
+$url_recurring_tar = "admin/tariffs/recurring";
+$search_arr = [
+    'main_attributes' => [
+        'available_for_services' => '1',
+        'tax_id' => ['!=', $tax_id],                 
+    ],
+];
 
-        if (empty($current_batch)) {
-            break; // Exit the loop if no more tariffs are found
-        }
+$api->api_call_get($url_recurring_tar.'?'.http_build_query($search_arr));
+$all_recurring_tar = $api->response;
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+file_put_contents($log_file,  "                                        Recurring Tariffs                                              \n", FILE_APPEND);
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+change_services($all_recurring_tar, "recurring");
 
-        foreach ($current_batch as &$inet_serv) {
-            // get all InetServices by API
-            $url_change_tarr = "admin/tariffs/change-tariff/";
-            $data_change = [
-                'newTariffId' => $new_tariff['id'],
-                'targetDate' => "2025-05-01",
-                'description' => $inet_serv['description'],
-                'newServicePrice' => $inet_serv['unit_price'],
-            ];
 
-            $result = $api->api_call_put($url_change_tarr.$inet_serv['id'].'?type=internet', '',$data_change);
-            if ($result) {
-                file_put_contents($log_file,  "Old servise ID: {$inet_serv['id']} -> New internet service created: ID {$api->response} \n", FILE_APPEND);
-            } else {
-                file_put_contents($log_file,  "Old servise ID: {$inet_serv['id']} -> New Internet service creating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
-            }
-        }
-
-        $offset += $batch_size;
-
-        // Optional: Add a delay to avoid overwhelming the API
-        // sleep(1);
-    }
-
-    file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
-    file_put_contents($log_file,  "\n\n", FILE_APPEND);
-    //break;
-};
 
 print_r('Thank you Nik!');
