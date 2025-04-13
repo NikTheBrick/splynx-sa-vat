@@ -2,6 +2,47 @@
 
 include '/var/www/splynx/addons/splynx-php-api/SplynxApi.php'; // Splynx API
 
+echo "Please make a choice:\n";
+echo "1 - VAT will be on ISP (tariffs & services price won't change) \n";
+echo "2 - VAT will be on customers (tariffs & services price will be changed)\n";
+echo "Enter your choice (1 or 2): ";
+
+$user_choice = trim(fgets(STDIN));
+if ($user_choice === '1') {
+    $user_choice = 'nochange';
+} elseif ($user_choice === '2') {
+    $user_choice = 'change';
+    echo "Please select rounding:\n";
+    echo "1 - round up to 2 decimals (always to biggest). Example: 123.2345 -> 123.24 (Default rounding!!!) \n";
+    echo "2 - round up to integer (always to biggest). Example: 123.2345 -> 124 \n";
+    echo "3 - round up to tenth integer (always to biggest). Example: 123.2345 -> 130 \n";
+    echo "Enter your choice (1 or 2 or 3): ";
+    $rounding_choice = trim(fgets(STDIN));
+    if ($rounding_choice === '1') {
+        $rounding_choice = 2;
+    } elseif ($rounding_choice === '2') {
+        $rounding_choice = 0;
+    } elseif ($rounding_choice === '3') {
+        $rounding_choice = -1;
+    } else {
+        echo "Invalid choice. Please start from beginning and run script!\n";
+        exit(1); // Exit with an error code
+    }
+} else {
+    echo "Invalid choice. Please enter 1 or 2.\n";
+    exit(1); // Exit with an error code
+}
+
+$user_choice = trim(fgets(STDIN));
+if ($user_choice === '1') {
+    $user_choice = 'nochange';
+} elseif ($user_choice === '2') {
+    $user_choice = 'change';
+} else {
+    echo "Invalid choice. Please enter 1 or 2.\n";
+    exit(1); // Exit with an error code
+}
+
 $log_file = "migrate_tax.log"; //log file
 
 //sending  email by API
@@ -16,17 +57,33 @@ $api->login([
 
 // TAX ID with 15.5 we have to skip it
 $tax_id = 15;
+$target_date = "2025-05-01"; // Make target date a variable
+
+//*********************************************
+// rounding 
+// $precision = 2 => $rounding_choice = 1
+// $precision = 0 => $rounding_choice = 2
+// $precision = -1 => $rounding_choice = 3
+//*********************************************
+function customRoundUp($number, $precision = 2) {
+    $factor = pow(10, $precision);
+    return ceil($number * $factor) / $factor;
+}
 
 //*********************************************
 // Change Services - The main function !!!
 //*********************************************
-function change_services($all_tariffs, $type) {
+function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file, $target_date, $user_choice, $rounding_choice) {
     foreach ($all_tariffs as &$tar) {
-        $tar['tax_id'] = $tax_id;
         $old_tariff = $tar['id'];
+        $tar['tax_id'] = $tax_id;
+        if($user_choice == 'change'){
+            $tar['price'] = ($tar['price'] / 1.15) * 1.155;
+            $tar['price'] = customRoundUp($tar['price'],$rounding_choice);
+        };
         unset($tar['id']);
         $tar['title'] = $tar['title'].' new 15.5%';
-        $result=$api->api_call_post('admin/tariffs/'.$type, $tar);
+        $result = $api->api_call_post('admin/tariffs/'.$type, $tar);
         if ($result) {
             $new_tariff = $api->response;
             file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New {$type} tariff created: {$new_tariff['id']} \n", FILE_APPEND);
@@ -35,58 +92,61 @@ function change_services($all_tariffs, $type) {
         }
         file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 
-        //working with services
-        $batch_size = 100; // You can adjust this value
-        $offset = 0;
+        if ($type != 'one-time'){
+            //working with services
+            $batch_size = 100; // You can adjust this value
+            $offset = 0;
+            $url_ser = 'admin/customers/customer/0/'.$type.'-services'; // Define URL outside the loop
 
-        while (true) {
-            // get all InetServices by API
-            $url_ser = 'admin/customers/customer/0/'.$type.'-services';
-
-            $search_arr = [
-                'main_attributes' => [
-                    'tariff_id' => $old_tariff,
-                    'bundle_service_id' => 0,
-                    'status' => 'active',
-                ],
-                'limit' => $batch_size,
-                'offset' => $offset,
-            ];
-
-            $api->api_call_get($url_ser . '?' . http_build_query($search_arr));
-            $current_batch = $api->response;
-
-            if (empty($current_batch)) {
-                break; // Exit the loop if no more tariffs are found
-            }
-
-            foreach ($current_batch as &$serv) {
-                // get all InetServices by API
-                $url_change_tarr = "admin/tariffs/change-tariff/";
-                $data_change = [
-                    'newTariffId' => $new_tariff['id'],
-                    'targetDate' => "2025-05-01",
-                    'description' => $serv['description'],
-                    'newServicePrice' => $serv['unit_price'],
+            while (true) {
+                $search_arr = [
+                    'main_attributes' => [
+                        'tariff_id' => $old_tariff,
+                        'bundle_service_id' => 0,
+                        'status' => 'active',
+                    ],
+                    'limit' => $batch_size,
+                    'offset' => $offset,
                 ];
 
-                $result = $api->api_call_put($url_change_tarr.$serv['id'].'?type=internet', '',$data_change);
-                if ($result) {
-                    file_put_contents($log_file,  "Old servise ID: {$serv['id']} -> New internet service created: ID {$api->response} \n", FILE_APPEND);
-                } else {
-                    file_put_contents($log_file,  "Old servise ID: {$serv['id']} -> New Internet service creating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                $api->api_call_get($url_ser . '?' . http_build_query($search_arr));
+                $current_batch = $api->response;
+
+                if (empty($current_batch)) {
+                    break; // Exit the loop if no more services are found for this tariff
                 }
+
+                foreach ($current_batch as &$serv) {
+                    // get all InetServices by API
+                    $url_change_tarr = "admin/tariffs/change-tariff/";
+                    if($user_choice == 'change'){
+                        $serv['unit_price'] = ($serv['unit_price'] / 1.15) * 1.155;
+                        $serv['unit_price'] = customRoundUp($serv['unit_price'],$rounding_choice);
+                    };
+                    $data_change = [
+                        'newTariffId' => $new_tariff['id'],
+                        'targetDate' => $target_date,
+                        'description' => $serv['description'],
+                        'newServicePrice' => $serv['unit_price'],
+                    ];
+
+                    $result = $api->api_call_put($url_change_tarr.$serv['id'].'?type='.$type, '',$data_change); // Use $type here
+                    if ($result) {
+                        file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updated to tariff ID: {$api->response} \n", FILE_APPEND);
+                    } else {
+                        file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                    }
+                }
+
+                $offset += $batch_size;
             }
-
-            $offset += $batch_size;
-
             // Optional: Add a delay to avoid overwhelming the API
             // sleep(1);
         }
 
         file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
         file_put_contents($log_file,  "\n\n", FILE_APPEND);
-        //break;
+        //break; // Consider if you really want to break after the first tariff
     };
 };
 
@@ -94,12 +154,12 @@ function change_services($all_tariffs, $type) {
 // Update Tariffs
 //***************
 
-// InetTariffs 
+// InetTariffs
 $url_inet_tar = "admin/tariffs/internet";
 $search_arr = [
     'main_attributes' => [
         'available_for_services' => '1',
-        'tax_id' => ['!=', $tax_id],                 
+        'tax_id' => ['!=', $tax_id],
     ],
 ];
 
@@ -108,15 +168,15 @@ $all_inet_tar = $api->response;
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 file_put_contents($log_file,  "                                        Internet Tariffs                                               \n", FILE_APPEND);
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
-change_services($all_inet_tar, "internet");
+change_services($api, $all_inet_tar, "internet", $tax_id, $log_file, $target_date, $user_choice, $rounding_choice);
 
 
-// VoiceTariffs 
+// VoiceTariffs
 $url_voice_tar = "admin/tariffs/voice";
 $search_arr = [
     'main_attributes' => [
         'available_for_services' => '1',
-        'tax_id' => ['!=', $tax_id],                 
+        'tax_id' => ['!=', $tax_id],
     ],
 ];
 
@@ -125,15 +185,15 @@ $all_voice_tar = $api->response;
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 file_put_contents($log_file,  "                                           Voice Tariffs                                               \n", FILE_APPEND);
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
-change_services($all_voice_tar, "voice");
+change_services($api, $all_voice_tar, "voice", $tax_id, $log_file, $target_date, $user_choice, $rounding_choice);
 
 
-// RecurringTariffs 
+// RecurringTariffs
 $url_recurring_tar = "admin/tariffs/recurring";
 $search_arr = [
     'main_attributes' => [
         'available_for_services' => '1',
-        'tax_id' => ['!=', $tax_id],                 
+        'tax_id' => ['!=', $tax_id],
     ],
 ];
 
@@ -142,8 +202,29 @@ $all_recurring_tar = $api->response;
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 file_put_contents($log_file,  "                                        Recurring Tariffs                                              \n", FILE_APPEND);
 file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
-change_services($all_recurring_tar, "recurring");
+change_services($api, $all_recurring_tar, "recurring", $tax_id, $log_file, $target_date, $user_choice, $rounding_choice);
+
+
+
+// One-timeTariffs
+$url_one_time_tar = "admin/tariffs/one-time";
+$search_arr = [
+    'main_attributes' => [
+        'available_for_services' => '1',
+        'tax_id' => ['!=', $tax_id],
+    ],
+];
+
+$api->api_call_get($url_one_time_tar.'?'.http_build_query($search_arr));
+$all_one_time_tar = $api->response;
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+file_put_contents($log_file,  "                                        One-time Tariffs                                              \n", FILE_APPEND);
+file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+change_services($api, $all_one_time_tar, "one-time", $tax_id, $log_file, $target_date, $user_choice, $rounding_choice);
+
 
 
 
 print_r('Thank you Nik!');
+
+?>
