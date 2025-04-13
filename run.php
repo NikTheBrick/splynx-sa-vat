@@ -8,9 +8,7 @@ echo "2 - VAT will be on customers (tariffs & services price will be changed)\n"
 echo "Enter your choice (1 or 2): ";
 
 $user_choice = trim(fgets(STDIN));
-if ($user_choice === '1') {
-    $user_choice = 'nochange';
-} elseif ($user_choice === '2') {
+if ($user_choice === '2') {
     $user_choice = 'change';
     echo "Please select rounding:\n";
     echo "1 - round up to 2 decimals (always to biggest). Example: 123.2345 -> 123.24 (Default rounding!!!) \n";
@@ -28,17 +26,7 @@ if ($user_choice === '1') {
         echo "Invalid choice. Please start from beginning and run script!\n";
         exit(1); // Exit with an error code
     }
-} else {
-    echo "Invalid choice. Please enter 1 or 2.\n";
-    exit(1); // Exit with an error code
-}
-
-$user_choice = trim(fgets(STDIN));
-if ($user_choice === '1') {
-    $user_choice = 'nochange';
-} elseif ($user_choice === '2') {
-    $user_choice = 'change';
-} else {
+} elseif  ($user_choice === '1') {
     echo "Invalid choice. Please enter 1 or 2.\n";
     exit(1); // Exit with an error code
 }
@@ -140,13 +128,11 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
 
                 $offset += $batch_size;
             }
-            // Optional: Add a delay to avoid overwhelming the API
-            // sleep(1);
+
         }
 
         file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
         file_put_contents($log_file,  "\n\n", FILE_APPEND);
-        //break; // Consider if you really want to break after the first tariff
     };
 };
 
@@ -210,7 +196,7 @@ change_services($api, $all_recurring_tar, "recurring", $tax_id, $log_file, $targ
 $url_one_time_tar = "admin/tariffs/one-time";
 $search_arr = [
     'main_attributes' => [
-        'available_for_services' => '1',
+        'enabled' => '1',
         'tax_id' => ['!=', $tax_id],
     ],
 ];
