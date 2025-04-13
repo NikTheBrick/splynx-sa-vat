@@ -38,11 +38,11 @@ foreach ($all_inet_tar as &$inet_tar) {
     $result=$api->api_call_post($url_inet_tar, $inet_tar);
     if ($result) {
         $new_tariff = $api->response;
-        file_put_contents($log_file,  "New Internet tariff created: {$new_tariff['id']} \n", FILE_APPEND);
+        file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New Internet tariff created: {$new_tariff['id']} \n", FILE_APPEND);
     } else {
-        file_put_contents($log_file,  "New Internet tariff creating ERROR: {$api->response} \n", FILE_APPEND);
+        file_put_contents($log_file,  "Old tariff ID: {$old_tariff} -> New Internet tariff creating ERROR: ". print_r($api->response, true) ."\n", FILE_APPEND);
     }
-
+    file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 
     //working with services
     $batch_size = 100; // You can adjust this value
@@ -55,6 +55,7 @@ foreach ($all_inet_tar as &$inet_tar) {
         $search_arr = [
             'main_attributes' => [
                 'tariff_id' => $old_tariff,
+                'bundle_service_id' => 0,
                 'status' => 'active',
             ],
             'limit' => $batch_size,
@@ -80,9 +81,9 @@ foreach ($all_inet_tar as &$inet_tar) {
 
             $result = $api->api_call_put($url_change_tarr.$inet_serv['id'].'?type=internet', '',$data_change);
             if ($result) {
-                file_put_contents($log_file,  "New internet service created: ID {$api->response}, old servise ID {$inet_serv['id']} \n", FILE_APPEND);
+                file_put_contents($log_file,  "Old servise ID: {$inet_serv['id']} -> New internet service created: ID {$api->response} \n", FILE_APPEND);
             } else {
-                file_put_contents($log_file,  "New Internet service creating ERROR: {$api->response} \n", FILE_APPEND);
+                file_put_contents($log_file,  "Old servise ID: {$inet_serv['id']} -> New Internet service creating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
             }
         }
 
@@ -92,6 +93,8 @@ foreach ($all_inet_tar as &$inet_tar) {
         // sleep(1);
     }
 
+    file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
+    file_put_contents($log_file,  "\n\n", FILE_APPEND);
     //break;
 };
 
