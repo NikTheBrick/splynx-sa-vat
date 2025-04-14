@@ -91,7 +91,7 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                     'main_attributes' => [
                         'tariff_id' => $old_tariff,
                         'bundle_service_id' => 0,
-                        'status' => 'active',
+                        'status' => ['IN', ['active', 'stopped']],
                     ],
                     'limit' => $batch_size,
                     'offset' => $offset,
@@ -107,22 +107,35 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                 foreach ($current_batch as &$serv) {
                     // get all InetServices by API
                     $url_change_tarr = "admin/tariffs/change-tariff/";
+                    $url_update_service = "admin/customers/customer/";
                     if($user_choice == 'change'){
                         $serv['unit_price'] = ($serv['unit_price'] / 1.15) * 1.155;
                         $serv['unit_price'] = customRoundUp($serv['unit_price'],$rounding_choice);
                     };
-                    $data_change = [
-                        'newTariffId' => $new_tariff['id'],
-                        'targetDate' => $target_date,
-                        'description' => $serv['description'],
-                        'newServicePrice' => $serv['unit_price'],
-                    ];
-
-                    $result = $api->api_call_put($url_change_tarr.$serv['id'].'?type='.$type, '',$data_change); // Use $type here
-                    if ($result) {
-                        file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updated to tariff ID: {$api->response} \n", FILE_APPEND);
-                    } else {
-                        file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                    if ($serv['status'] == 'active') {
+                        $data_change = [
+                            'newTariffId' => $new_tariff['id'],
+                            'targetDate' => $target_date,
+                            'description' => $serv['description'],
+                            'newServicePrice' => $serv['unit_price'],
+                        ];
+                        $result = $api->api_call_put($url_change_tarr.$serv['id'].'?type='.$type, '',$data_change); // Use $type here
+                        if ($result) {
+                            file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updated to tariff ID: {$api->response} \n", FILE_APPEND);
+                        } else {
+                            file_put_contents($log_file,  "Old service ID: {$serv['id']} -> New {$type} service updating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                        }
+                    } elseif ($serv['status'] == 'stopped') {
+                        $data_array = [
+                            'tariff_id' => $new_tariff['id'],
+                            'unit_price' => $serv['unit_price'],
+                        ];
+                        $result = $api->api_call_put($url_update_service.$serv['customer_id'].'/'.$type.'-services--'.$serv['id'],'', $data_array);
+                        if ($result) {
+                            file_put_contents($log_file,  "Stopped service ID: {$serv['id']} has been updated -> Ok \n", FILE_APPEND);
+                        } else {
+                            file_put_contents($log_file,  "Stopped service ID: {$serv['id']} updating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
+                        }
                     }
                 }
 
