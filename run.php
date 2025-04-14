@@ -81,10 +81,10 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
         file_put_contents($log_file,  "-------------------------------------------------------------------------------------------------------\n", FILE_APPEND);
 
         if ($type != 'one-time'){
-            //working with services
-            $batch_size = 100; // You can adjust this value
+            $all_services = [];
+            $batch_size = 100;
             $offset = 0;
-            $url_ser = 'admin/customers/customer/0/'.$type.'-services'; // Define URL outside the loop
+            $url_ser = 'admin/customers/customer/0/'.$type.'-services';
 
             while (true) {
                 $search_arr = [
@@ -101,11 +101,14 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                 $current_batch = $api->response;
 
                 if (empty($current_batch)) {
-                    break; // Exit the loop if no more services are found for this tariff
+                    break;
                 }
-                file_put_contents($log_file,  "Batch size: " . print_r($current_batch, true) . " services fetched (offset: {$offset})\n", FILE_APPEND);
-                foreach ($current_batch as &$serv) {
-                    file_put_contents($log_file,  "  Service ID: {$serv['id']}, Status: {$serv['status']}\n", FILE_APPEND);
+
+                $all_services = array_merge($all_services, $current_batch);
+                $offset += $batch_size;
+            }
+
+                foreach ($all_services as &$serv) {
                     // get all InetServices by API
                     $url_change_tarr = "admin/tariffs/change-tariff/";
                     $url_update_service = "admin/customers/customer/";
@@ -138,9 +141,7 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                             file_put_contents($log_file,  "Stopped service ID: {$serv['id']} updating ERROR: " . print_r($api->response, true) . "\n", FILE_APPEND);
                         }
                     }
-                }
-
-                $offset += $batch_size;
+                
             }
 
         }
