@@ -103,7 +103,7 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                 if (empty($current_batch)) {
                     break; // Exit the loop if no more services are found for this tariff
                 }
-                file_put_contents($log_file,  "Batch size: " . count($current_batch) . " services fetched (offset: {$offset})\n", FILE_APPEND);
+                file_put_contents($log_file,  "Batch size: " . print_r($current_batch, true) . " services fetched (offset: {$offset})\n", FILE_APPEND);
                 foreach ($current_batch as &$serv) {
                     file_put_contents($log_file,  "  Service ID: {$serv['id']}, Status: {$serv['status']}\n", FILE_APPEND);
                     // get all InetServices by API
