@@ -5,11 +5,11 @@ include '/var/www/splynx/addons/splynx-php-api/SplynxApi.php'; // Splynx API
 echo "Please make a choice:\n";
 echo "1 - VAT will be on ISP (tariffs & services price won't change) \n";
 echo "2 - VAT will be on customers (tariffs & services price will be changed)\n";
+echo "3 - VAT will be on ISP (*** VAT exclude!!! ***)(tariffs & services price will be changed) \n";
 echo "Enter your choice (1 or 2): ";
 
 $user_choice = trim(fgets(STDIN));
-if ($user_choice === '2') {
-    $user_choice = 'change';
+if ($user_choice === '2' or $user_choice === '3') {
     echo "Please select rounding:\n";
     echo "1 - round up to 2 decimals (always to biggest). Example: 123.2345 -> 123.24 (Default rounding!!!) \n";
     echo "2 - round up to integer (always to biggest). Example: 123.2345 -> 124 \n";
@@ -65,8 +65,12 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
     foreach ($all_tariffs as &$tar) {
         $old_tariff = $tar['id'];
         $tar['tax_id'] = $tax_id;
-        if($user_choice == 'change'){
+        if($user_choice === '2'){
             $tar['price'] = ($tar['price'] / 1.15) * 1.155;
+            $tar['price'] = customRoundUp($tar['price'],$rounding_choice);
+        };
+        if($user_choice === '3'){
+            $tar['price'] = ($tar['price'] * 1.15) / 1.155;
             $tar['price'] = customRoundUp($tar['price'],$rounding_choice);
         };
         unset($tar['id']);
@@ -112,8 +116,12 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                     // get all InetServices by API
                     $url_change_tarr = "admin/tariffs/change-tariff/";
                     $url_update_service = "admin/customers/customer/";
-                    if($user_choice == 'change'){
+                    if($user_choice === '2'){
                         $serv['unit_price'] = ($serv['unit_price'] / 1.15) * 1.155;
+                        $serv['unit_price'] = customRoundUp($serv['unit_price'],$rounding_choice);
+                    };
+                    if($user_choice === '3'){
+                        $serv['unit_price'] = ($serv['unit_price'] * 1.15) / 1.155;
                         $serv['unit_price'] = customRoundUp($serv['unit_price'],$rounding_choice);
                     };
                     if ($serv['status'] == 'active') {
