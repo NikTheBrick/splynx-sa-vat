@@ -34,13 +34,13 @@ if ($user_choice === '2' or $user_choice === '3') {
 $log_file = "migrate_tax.log"; //log file
 
 //sending  email by API
-$api_url = "";
+$api_url = "https://porsche.my-services.com.ua/";
 $api = new SplynxAPI($api_url);
 $api->setVersion(SplynxApi::API_VERSION_2);
 $api->login([
     'auth_type'=> SplynxApi::AUTH_TYPE_API_KEY,
-    'key' => "", // please set your key
-    'secret' => "", // please set your secret
+    'key' => "c169131b34d7582b3fd124fae6e75ad5", // please set your key
+    'secret' => "e95fc1e7234941c5704553095afbbfa6", // please set your secret
 ]);
 
 // TAX ID with 15.5 we have to skip it
@@ -125,7 +125,7 @@ function change_services(SplynxAPI $api, $all_tariffs, $type, $tax_id, $log_file
                         $serv['unit_price'] = customRoundUp($serv['unit_price'],$rounding_choice);
                     };
                     if ($serv['status'] == 'active') {
-                        if ($serv['date'] < '2025-05-01'){
+                        if ($serv['start_date'] < '2025-05-01'){
                             $data_change = [
                                 'newTariffId' => $new_tariff['id'],
                                 'targetDate' => $target_date,
@@ -248,5 +248,6 @@ change_services($api, $all_one_time_tar, "one-time", $tax_id, $log_file, $target
 
 
 print_r('Thank you Nik!');
+echo ''. PHP_EOL;;
 print_r('==============');
 ?>
