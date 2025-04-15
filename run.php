@@ -6,7 +6,7 @@ echo "Please make a choice:\n";
 echo "1 - VAT will be on ISP (*** VAT include!!! ***) OR VAT will be on customers (*** VAT exclude!!! ***) (tariffs & services price won't change) \n";
 echo "2 - VAT will be on customers (tariffs & services price will be changed)\n";
 echo "3 - VAT will be on ISP (*** VAT exclude!!! ***)(tariffs & services price will be changed) \n";
-echo "Enter your choice (1 or 2): ";
+echo "Enter your choice (1 or 2 or 3): ";
 
 $user_choice = trim(fgets(STDIN));
 if ($user_choice === '2' or $user_choice === '3') {
