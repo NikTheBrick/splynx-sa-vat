@@ -8,6 +8,7 @@ echo "2 - VAT will be on customers (tariffs & services price will be changed)\n"
 echo "3 - VAT will be on ISP (*** VAT exclude!!! ***)(tariffs & services price will be changed) \n";
 echo "Enter your choice (1 or 2 or 3): ";
 
+$rounding_choice = '';
 $user_choice = trim(fgets(STDIN));
 if ($user_choice === '2' or $user_choice === '3') {
     echo "Please select rounding:\n";
@@ -26,8 +27,8 @@ if ($user_choice === '2' or $user_choice === '3') {
         echo "Invalid choice. Please start from beginning and run script!\n";
         exit(1); // Exit with an error code
     }
-} elseif  ($user_choice === '1') {
-    echo "Invalid choice. Please enter 1 or 2.\n";
+} elseif  ($user_choice !== '1') {
+    echo "Invalid choice. Please enter 1 or 2 or 3.\n";
     exit(1); // Exit with an error code
 }
 
