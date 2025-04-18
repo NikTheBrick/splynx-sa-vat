@@ -22,3 +22,7 @@ For the script need to:
 
 3. API Domain URL
 4. TAX ID  (could already exist or need to add it manually)
+
+
+Finally, run the script by command:
+php run.php
