@@ -52,6 +52,8 @@ while (true) {
 
 
 foreach ($all_invoice as &$invoice) {
+    $items = [];
+
     // array Items for Credit Note
     file_put_contents($log_file,  "Invoice id: {$invoice['id']} -> ", FILE_APPEND);
     $wrong_tax = 0;
