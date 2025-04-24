@@ -57,7 +57,6 @@ foreach ($all_invoice as &$invoice) {
     $wrong_tax = 0;
     foreach ($invoice['items'] as &$item) {        
         if ($item['tax'] == '15.5000'){
-            print_r(" item OK ");
             $wrong_tax = 1;
         }
     }
@@ -86,9 +85,9 @@ foreach ($all_invoice as &$invoice) {
     // update invoice to clean-up periods
     $result=$api->api_call_put($url_invoice, $invoice['id'], $invoice);
     if ($result) {
-        file_put_contents($log_file,  " was updated -> Ok ", FILE_APPEND);
+        file_put_contents($log_file,  " invoice was updated -> Ok ->", FILE_APPEND);
     } else {
-        file_put_contents($log_file,  " not updated -> ERROR \n", FILE_APPEND);
+        file_put_contents($log_file,  " invoice wasn't updated -> ERROR \n", FILE_APPEND);
         continue;
     }
 
@@ -105,7 +104,7 @@ foreach ($all_invoice as &$invoice) {
 
     $result=$api->api_call_post($url_cn, $data);
     if ($result) {
-        file_put_contents($log_file,  " Credit Note created" . print_r($api->response, true) . "\n", FILE_APPEND);
+        file_put_contents($log_file,  " Credit Note created {$api->response['id']} \n", FILE_APPEND);
     } else {
         file_put_contents($log_file,  "ERROR" . print_r($api->response, true) . "\n", FILE_APPEND);
     }
@@ -114,6 +113,7 @@ foreach ($all_invoice as &$invoice) {
 
 
 
+echo ''. PHP_EOL; 
 print_r('Thank you Nik!');
 echo ''. PHP_EOL;
 print_r('==============');
