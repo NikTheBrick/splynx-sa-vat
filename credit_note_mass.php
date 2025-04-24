@@ -48,9 +48,6 @@ while (true) {
 }
 
 
-//print_r($all_invoice);
-
-
 foreach ($all_invoice as &$invoice) {
     $items_for_cn = [];
 
@@ -68,7 +65,6 @@ foreach ($all_invoice as &$invoice) {
         continue;
     }
 
-    print_r($invoice);
 
     foreach ($invoice['items'] as $key => $item) {
         $items_for_cn[] = [
@@ -84,7 +80,6 @@ foreach ($all_invoice as &$invoice) {
         $invoice['items'][$key]['period_to'] = '0000-00-00';
     }
 
-    print_r($invoice);
     // update invoice to clean-up periods
     $result=$api->api_call_put($url_invoice, $invoice['id'], $invoice);
     if ($result) {
@@ -111,10 +106,6 @@ foreach ($all_invoice as &$invoice) {
     } else {
         file_put_contents($log_file,  "ERROR" . print_r($api->response, true) . "\n", FILE_APPEND);
     }
-
-
-
-    print_r("-----------------------------------------------");echo ''. PHP_EOL; 
 
 }
 
