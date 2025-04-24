@@ -57,8 +57,8 @@ foreach ($all_invoice as &$invoice) {
     // array Items for Credit Note
     file_put_contents($log_file,  "Invoice id: {$invoice['id']} -> ", FILE_APPEND);
     $wrong_tax = 0;
-    foreach ($invoice['items'] as &$item) {        
-        if ($item['tax'] == '15.5000'){
+    foreach ($invoice['items'] as $one_item) {        
+        if ($one_item['tax'] == '15.5000'){
             $wrong_tax = 1;
         }
     }
@@ -68,6 +68,7 @@ foreach ($all_invoice as &$invoice) {
         continue;
     }
 
+    print_r($invoice);
 
     foreach ($invoice['items'] as $key => $item) {
         $items_for_cn[] = [
@@ -83,7 +84,7 @@ foreach ($all_invoice as &$invoice) {
         $invoice['items'][$key]['period_to'] = '0000-00-00';
     }
 
-
+    print_r($invoice);
     // update invoice to clean-up periods
     $result=$api->api_call_put($url_invoice, $invoice['id'], $invoice);
     if ($result) {
@@ -110,6 +111,10 @@ foreach ($all_invoice as &$invoice) {
     } else {
         file_put_contents($log_file,  "ERROR" . print_r($api->response, true) . "\n", FILE_APPEND);
     }
+
+
+
+    print_r("-----------------------------------------------");echo ''. PHP_EOL; 
 
 }
 
