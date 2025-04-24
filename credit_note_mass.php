@@ -7,13 +7,13 @@ include '/var/www/splynx/addons/splynx-php-api/SplynxApi.php'; // Splynx API
 $log_file = "credit_notes.log"; //log file
 
 //sending  email by API
-$api_url = "https://porsche.my-services.com.ua/";
+$api_url = "";
 $api = new SplynxAPI($api_url);
 $api->setVersion(SplynxApi::API_VERSION_2);
 $api->login([
     'auth_type'=> SplynxApi::AUTH_TYPE_API_KEY,
-    'key' => "c169131b34d7582b3fd124fae6e75ad5", // please set your key
-    'secret' => "e95fc1e7234941c5704553095afbbfa6", // please set your secret
+    'key' => "", // please set your key
+    'secret' => "", // please set your secret
 ]);
 
 
