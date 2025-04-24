@@ -52,7 +52,7 @@ while (true) {
 
 
 foreach ($all_invoice as &$invoice) {
-    $items = [];
+    $items_for_cn = [];
 
     // array Items for Credit Note
     file_put_contents($log_file,  "Invoice id: {$invoice['id']} -> ", FILE_APPEND);
@@ -70,7 +70,7 @@ foreach ($all_invoice as &$invoice) {
 
 
     foreach ($invoice['items'] as $key => $item) {
-        $items[] = [
+        $items_for_cn[] = [
             'description' => $item['description'],
             'quantity' => $item['quantity'],
             'unit' => $item['unit'],
@@ -101,7 +101,7 @@ foreach ($all_invoice as &$invoice) {
         'customer_id' => $invoice['customer_id'],
         'resetPeriodForService' => '1',
         'status' => 'not_refunded',
-        'items' => $items,
+        'items' => $items_for_cn,
     ];
 
     $result=$api->api_call_post($url_cn, $data);
