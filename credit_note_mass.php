@@ -6,8 +6,7 @@ include '/var/www/splynx/addons/splynx-php-api/SplynxApi.php'; // Splynx API
 
 $log_file = "credit_notes.log"; //log file
 
-//sending  email by API
-$api_url = "";
+$api_url = ""; // please set your domain
 $api = new SplynxAPI($api_url);
 $api->setVersion(SplynxApi::API_VERSION_2);
 $api->login([
