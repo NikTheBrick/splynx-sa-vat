@@ -93,6 +93,7 @@ foreach ($all_invoice as &$invoice) {
     $url_cn = "admin/finance/credit-notes";
     $data = [
         'invoicesId' => $invoice['id'],
+        'date_created' => $invoice['date_created'],
         'customer_id' => $invoice['customer_id'],
         'resetPeriodForService' => '1',
         'status' => 'not_refunded',
